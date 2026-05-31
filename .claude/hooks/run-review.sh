@@ -1,6 +1,10 @@
 #!/bin/bash
 # Stop hook — .REVIEW_REQUIRED 마커가 있으면 터미널에 검토 요청 경고를 출력한다.
-MARKER=/Users/fairytale/dev/passly/.REVIEW_REQUIRED
+
+# 프로젝트 루트: .claude/hooks/run-review.sh 기준 두 단계 위
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+MARKER="$PROJECT_ROOT/.REVIEW_REQUIRED"
 
 [ ! -f "$MARKER" ] && exit 0
 

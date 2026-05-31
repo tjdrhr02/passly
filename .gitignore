@@ -1,0 +1,53 @@
+# ── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ── Node / Frontend ──────────────────────────────────────
+node_modules/
+dist/
+build/
+.next/
+
+# ── Environment & Secrets ────────────────────────────────
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# ── IDE ──────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── OS ───────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Docker ───────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── Database ─────────────────────────────────────────────
+*.sqlite
+*.db
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Claude Code — 기기 전용 설정 (커밋하지 않음) ──────────
+.claude/settings.local.json
+
+# ── Review gate marker (세션 임시 파일) ──────────────────
+.REVIEW_REQUIRED

@@ -4,16 +4,20 @@
 검사 항목:
   [STALE]   파일은 존재하나 AGENTS.md에 완료(✅) 미표시
   [MISSING] AGENTS.md에 완료 표시됐으나 파일이 없음
-  [ORPHAN]  docs/ 에 있으나 AGENTS.md에 미등록 파일
+  [ORPHAN]  docs/ 에 있으나 AGENTS.md에 미언급 파일
   [SKILL]   skills SKILL.md가 참조하는 docs 문서가 AGENTS.md에 전혀 없음
 """
 import os
 import re
 import glob
 
-ROOT = '/Users/fairytale/dev/passly'
-AGENTS_MD = os.path.join(ROOT, 'AGENTS.md')
-DOCS_DIR  = os.path.join(ROOT, 'docs')
+# 프로젝트 루트: .claude/hooks/sync-check.py 기준 두 단계 위
+_HOOKS_DIR  = os.path.dirname(os.path.abspath(__file__))
+_CLAUDE_DIR = os.path.dirname(_HOOKS_DIR)
+ROOT       = os.path.dirname(_CLAUDE_DIR)
+
+AGENTS_MD  = os.path.join(ROOT, 'AGENTS.md')
+DOCS_DIR   = os.path.join(ROOT, 'docs')
 SKILLS_DIR = os.path.join(ROOT, '.claude', 'skills')
 
 # ANSI 색상
@@ -30,7 +34,7 @@ def parse_agents_md():
     """Wave 섹션의 docs 항목을 파싱.
     반환: (entries, all_mentioned)
       entries: list of (doc_rel_path, is_marked_complete)
-      all_mentioned: set of doc_rel_path — AGENTS.md 전체 본문에 언급된 경로 (괄호 표기 포함)
+      all_mentioned: set — AGENTS.md 전체 본문에 언급된 경로 (괄호 표기 포함)
     """
     if not os.path.exists(AGENTS_MD):
         return [], set()
@@ -119,7 +123,7 @@ def run_checks():
                 f'{doc_path} — AGENTS.md 완료 표시됐으나 파일 없음'
             ))
 
-    # [ORPHAN] docs/ 실제 파일이 AGENTS.md에 미등록
+    # [ORPHAN] docs/ 실제 파일이 AGENTS.md에 미언급
     for doc_path in sorted(on_disk):
         if doc_path not in agents_known:
             issues.append((
@@ -128,7 +132,6 @@ def run_checks():
             ))
 
     # [SKILL] 스킬이 참조하는 docs 문서가 AGENTS.md에 전혀 없는 경우만 경고
-    # (Wave 5처럼 미래 문서는 AGENTS.md에 언급만 돼 있어도 정상)
     for skill_name, refs in skill_refs.items():
         for doc_path in refs:
             if doc_path not in agents_known:

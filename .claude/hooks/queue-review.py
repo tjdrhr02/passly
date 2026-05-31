@@ -8,7 +8,12 @@ import os
 import re
 
 IMPL_PATTERN = re.compile(r'\.(py|ts|tsx|sql)$')
-MARKER = '/Users/fairytale/dev/passly/.REVIEW_REQUIRED'
+
+# 프로젝트 루트: .claude/hooks/queue-review.py 기준 두 단계 위
+_HOOKS_DIR  = os.path.dirname(os.path.abspath(__file__))
+_CLAUDE_DIR = os.path.dirname(_HOOKS_DIR)
+PROJECT_ROOT = os.path.dirname(_CLAUDE_DIR)
+MARKER = os.path.join(PROJECT_ROOT, '.REVIEW_REQUIRED')
 
 
 def main():

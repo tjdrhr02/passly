@@ -1,0 +1,54 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 *)",
+      "Bash(xargs ls -la)",
+      "Bash(gh api *)",
+      "Bash(gh repo *)",
+      "Bash(chmod +x *)",
+      "Bash(rm .REVIEW_REQUIRED)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/queue-review.py"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/gate-review.py"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/run-review.sh"
+          },
+          {
+            "type": "command",
+            "command": "python3 .claude/hooks/sync-check.py"
+          }
+        ]
+      }
+    ]
+  }
+}
