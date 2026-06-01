@@ -197,34 +197,34 @@ is_deleted  BOOLEAN     NOT NULL DEFAULT false
 - [ ] docs/06-data-quality.md ✅ (완료)
 - [ ] docs/09-adr.md ✅ (완료)
 
-### Wave 2 — 환경 세팅 (병렬 가능)
-| 브랜치 | 작업 |
-|--------|------|
-| wave2-infra | Docker Compose 세팅 |
-| wave2-db | DDL + Alembic migration |
-| wave2-fe-scaffold | React + Vite + Tailwind + shadcn/ui |
+### Wave 2 — 환경 세팅 ✅ (완료)
+| 브랜치 | 작업 | 상태 |
+|--------|------|------|
+| wave2-infra | Docker Compose 세팅 | ✅ |
+| wave2-db | DDL + Alembic migration | ✅ |
+| wave2-fe-scaffold | React + Vite + Tailwind + shadcn/ui | ✅ |
 
-### Wave 3 — 백엔드 핵심 (병렬 가능)
-| 브랜치 | 작업 |
-|--------|------|
-| wave3-pipeline | PDF 파싱 → chunking → embedding → pgvector |
-| wave3-api-base | FastAPI 기본 구조 + 인증 |
+### Wave 3 — 백엔드 핵심 ✅ (완료)
+| 브랜치 | 작업 | 상태 |
+|--------|------|------|
+| wave3-pipeline | PDF 파싱(parser.py) → 청킹(chunker.py) → 임베딩(embedder.py) → 품질평가(quality.py) → 색인(indexer.py) → 오케스트레이터(pipeline.py) | ✅ |
+| wave3-api-base | FastAPI 기본 구조 + JWT 인증(auth.py) | ✅ |
 
-### Wave 4 — 기능 구현 (페이지별 병렬)
-| 브랜치 | 작업 |
-|--------|------|
-| wave4-upload | /upload + 파이프라인 연동 |
-| wave4-exam | /exam + 시험 세션 API |
-| wave4-practice | /practice + AI 문제 생성 |
-| wave4-review | /review + 오답 조회 |
-| wave4-dashboard | / 대시보드 |
-| wave4-chat | /chat + RAG (선택) |
+### Wave 4 — 기능 구현 ✅ (완료)
+| 브랜치 | 작업 | 상태 |
+|--------|------|------|
+| wave4-upload | POST /api/documents/upload + GET /api/documents + 파이프라인 BackgroundTasks 연동 + UploadPage.tsx | ✅ |
+| wave4-exam | POST /api/exam-sessions + GET questions + POST submit + GET result + ExamPage.tsx (타이머+셔플+채점+해설) | ✅ |
+| wave4-practice | POST /api/practice/generate + POST /api/practice/submit + PracticePage.tsx (즉시 채점+해설) | ✅ |
+| wave4-review | GET /api/exam-sessions + GET attempts + GET wrong-attempts + ReviewPage.tsx (오답토글+해설) | ✅ |
+| wave4-dashboard | GET /api/analytics/summary + recent-sessions + weak-domains + DashboardPage.tsx | ✅ |
+| wave4-chat | GET /api/chat (Hybrid Search + Gemini 답변) + RAG retriever/generator + ChatPage.tsx (출처 패널) | ✅ |
 
 ### Wave 5 — 통합 + 산출물
-- [ ] Hybrid Search 구현 + 비교
-- [ ] 검색 품질 평가 (docs/07-search-evaluation.md)
-- [ ] GCP 배포 검증
-- [ ] README 완성
+- [ ] Hybrid Search recall@10 측정 + Vector 단독 비교
+- [ ] 검색 품질 평가 (docs/07-search-evaluation.md 작성)
+- [ ] GCP 배포 검증 (Cloud Run + Cloud SQL + Cloud Storage)
+- [ ] README 완성 (포트폴리오 소개 + 아키텍처 다이어그램)
 
 ---
 
