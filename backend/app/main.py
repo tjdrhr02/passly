@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
 from app.api.exam import router as exam_router
+from app.api.practice import router as practice_router
 from app.config import get_settings
 from app.middleware import RequestLoggingMiddleware, global_exception_handler
 
@@ -37,6 +38,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 # 라우터
 app.include_router(auth_router)
 app.include_router(exam_router)
+app.include_router(practice_router)
 
 
 @app.get("/health", tags=["health"])
