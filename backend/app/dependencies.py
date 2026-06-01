@@ -1,10 +1,12 @@
+from __future__ import annotations
+from typing import Optional
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.config import get_settings
 
-_session_factory: async_sessionmaker[AsyncSession] | None = None
+_session_factory: Optional[async_sessionmaker[AsyncSession]] = None
 
 
 def _get_factory() -> async_sessionmaker[AsyncSession]:

@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 from datetime import datetime
 
@@ -30,10 +32,10 @@ class ExamSession(Base, CommonMixin):
     total_questions: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     # [반정규화] 대시보드 집계 성능 최적화 — docs/03-erd-physical.md 섹션 8
     correct_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    time_limit_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    elapsed_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    time_limit_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    elapsed_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     is_completed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
-    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)

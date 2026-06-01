@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 
 from sqlalchemy import ForeignKey, Text
@@ -19,7 +21,7 @@ class AnswerExplanation(Base, CommonMixin):
     )
     explanation_text: Mapped[str] = mapped_column(Text, nullable=False)
     # NULLABLE: 해설 근거 청크 없을 수 있음
-    source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+    source_chunk_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("document_chunks.id", ondelete="RESTRICT"),
         nullable=True,

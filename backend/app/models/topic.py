@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 
 from sqlalchemy import ForeignKey, String, Text
@@ -16,4 +18,4 @@ class Topic(Base, CommonMixin):
         nullable=False,
     )
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)

@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 from datetime import datetime
 
@@ -16,6 +18,6 @@ class User(Base, CommonMixin):
     access_level: Mapped[str] = mapped_column(
         String(50), nullable=False, default="PRIVATE", server_default="PRIVATE"
     )
-    last_login_at: Mapped[datetime | None] = mapped_column(
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )

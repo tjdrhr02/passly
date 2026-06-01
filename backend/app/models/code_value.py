@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 from sqlalchemy import Boolean, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 

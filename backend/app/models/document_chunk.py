@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 from decimal import Decimal
 
@@ -23,19 +25,19 @@ class DocumentChunk(Base, CommonMixin):
         nullable=False,
     )
     chunk_text: Mapped[str] = mapped_column(Text, nullable=False)
-    chunk_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    chunk_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     chunk_order: Mapped[int] = mapped_column(Integer, nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
-    difficulty: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    quality_score: Mapped[Decimal | None] = mapped_column(Numeric(5, 2), nullable=True)
+    difficulty: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    quality_score: Mapped[Optional[Decimal]] = mapped_column(Numeric(5, 2), nullable=True)
     access_level: Mapped[str] = mapped_column(
         String(50), nullable=False, default="SHARED", server_default="SHARED"
     )
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, server_default="true")
     # Generated column — DB가 chunk_text 기반으로 자동 계산 (FTS용)
-    chunk_tsv: Mapped[str | None] = mapped_column(
+    chunk_tsv: Mapped[Optional[str]] = mapped_column(
         TSVECTOR,
         Computed("to_tsvector('english', coalesce(chunk_text, ''))", persisted=True),
-        init=False,
+
         nullable=True,
     )

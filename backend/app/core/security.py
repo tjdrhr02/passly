@@ -3,6 +3,7 @@
 secret_key는 환경변수 SECRET_KEY에서 로드 (하드코딩 금지).
 """
 from __future__ import annotations
+from typing import Optional
 
 from datetime import datetime, timedelta, timezone
 from typing import Any
@@ -26,7 +27,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(
     subject: str,
-    extra: dict[str, Any] | None = None,
+    extra: Optional[dict[str, Any]] = None,
 ) -> str:
     """JWT 액세스 토큰 생성. subject는 user_id (UUID 문자열)."""
     settings = get_settings()

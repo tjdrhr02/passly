@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 
 from sqlalchemy import Boolean, ForeignKey, String, Text
@@ -21,7 +23,7 @@ class Question(Base, CommonMixin):
         nullable=False,
     )
     # NULLABLE: 덤프 파싱 문제는 출처 청크 없음 (docs/02-erd-logical.md 결정 5)
-    source_chunk_id: Mapped[uuid.UUID | None] = mapped_column(
+    source_chunk_id: Mapped[Optional[uuid.UUID]] = mapped_column(
         UUID(as_uuid=True),
         ForeignKey("document_chunks.id", ondelete="RESTRICT"),
         nullable=True,

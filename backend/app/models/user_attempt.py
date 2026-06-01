@@ -1,3 +1,5 @@
+from __future__ import annotations
+from typing import Optional
 import uuid
 from datetime import datetime
 
@@ -32,7 +34,7 @@ class UserAttempt(Base, CommonMixin):
         JSONB, nullable=False, server_default="'[]'"
     )
     is_correct: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
-    time_spent_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    time_spent_seconds: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     answered_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )
