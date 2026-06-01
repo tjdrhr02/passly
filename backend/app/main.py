@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.auth import router as auth_router
+from app.api.chat import router as chat_router
 from app.config import get_settings
 from app.middleware import RequestLoggingMiddleware, global_exception_handler
 
@@ -35,6 +36,7 @@ app.add_exception_handler(Exception, global_exception_handler)
 
 # 라우터
 app.include_router(auth_router)
+app.include_router(chat_router)
 
 
 @app.get("/health", tags=["health"])

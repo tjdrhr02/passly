@@ -34,6 +34,15 @@ def _ensure_configured() -> None:
     _configured = True
 
 
+def get_llm_model() -> genai.GenerativeModel:
+    """Gemini LLM 모델 인스턴스 반환."""
+    _ensure_configured()
+    if USE_VERTEX_AI:
+        from vertexai.generative_models import GenerativeModel
+        return GenerativeModel(LLM_MODEL_NAME)
+    return genai.GenerativeModel(LLM_MODEL_NAME)
+
+
 async def embed_texts(
     texts: list[str],
     task_type: str = "retrieval_document",
