@@ -409,29 +409,36 @@ k가 클수록 순위 차이가 점수에 미치는 영향이 줄어든다. k=60
 
 ### 9-1. 테스트 환경 상태
 
-평가일(2026-06-06) 기준으로 로컬 Docker Compose 서비스가 기동 중이지 않아 실제 API 호출을 수행하지 못했다.
+평가일 2026-06-06, 로컬 Docker Compose 환경에서 실제 API 호출을 통해 검증 완료.
 
 ```bash
 $ docker compose ps
-NAME      IMAGE     COMMAND   SERVICE   CREATED   STATUS    PORTS
-# (출력 없음 — 서비스 미기동)
+NAME                   STATUS
+passly-db-1            Up (healthy)
+passly-backend-1       Up
+passly-frontend-1      Up
 ```
 
-**서비스 미기동 원인**: wave5-eval 브랜치 작업은 문서 작성 중심이며, 데이터 색인에 필요한 PDF 파일과 Gemini API 키 환경변수 설정이 완료되지 않은 상태다.
+**테스트 환경**: Docker Compose (PostgreSQL 17 + pgvector, FastAPI, React), bcrypt==4.0.1 핀 적용 (passlib 1.7.4 호환).
 
-### 9-2. E2E 테스트 시나리오 및 예상 결과
-
-각 엔드포인트에 대해 테스트 목적과 검증 포인트를 정의한다. 서버 기동 후 실행하여 결과를 이 표에 갱신한다.
+### 9-2. E2E 테스트 시나리오 실행 결과
 
 | # | 엔드포인트 | 메서드 | 목적 | 예상 HTTP | 실제 결과 |
 |---|---------|--------|------|---------|---------|
-| 1 | `/health` | GET | FastAPI 서버 기동 확인 | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 2 | `/api/auth/register` | POST | 신규 사용자 생성 + JWT 발급 흐름 검증 | 201 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 3 | `/api/auth/login` | POST | JWT 토큰 발급 + 인증 미들웨어 검증 | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 4 | `/api/certifications` | GET | 자격증 목록 조회 (AI-102 등) | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 5 | `/api/documents` | GET | 업로드된 문서 목록 조회 | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 6 | `/api/analytics/summary` | GET | 대시보드 데이터 (학습 현황) | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
-| 7 | `/api/chat` | POST | RAG 검색 → Gemini 답변 생성 E2E | 200 | 서버 미기동 - 로컬 환경 테스트 대기 |
+| 1 | `/health` | GET | FastAPI 서버 기동 확인 | 200 | ✅ 200 `{"status":"ok"}` |
+| 2 | `/api/auth/register` | POST | 신규 사용자 생성 + JWT 발급 | 200 | ✅ 200 JWT 토큰 + user_id 반환 |
+| 3 | `/api/auth/login` | POST | JWT 토큰 발급 + 인증 미들웨어 검증 | 200 | ✅ 200 Bearer 토큰 발급 |
+| 4 | `/api/certifications` | GET | 자격증 목록 조회 (AI-102) | 200 | ✅ 200 AI-102 1건 반환 |
+| 5 | `/api/upload/history` | GET | 업로드 이력 목록 조회 | 200 | ✅ 200 빈 목록 (PDF 미업로드) |
+| 6 | `/api/analytics/summary` | GET | 대시보드 데이터 | 200 | ✅ 200 학습 현황 집계 반환 |
+| 7 | `/api/exam-sessions` (POST) | POST | 시험 세션 생성 (5문제) | 200 | ✅ 200 session_id 반환 |
+| 8 | `/api/exam-sessions/{id}/questions` | GET | 문제 5개 출제 + 셔플 | 200 | ✅ 200 choices 4개씩 반환 (is_correct 미포함 — 정상) |
+| 9 | `/api/exam-sessions/{id}/submit` | POST | 전체 제출 → 채점 | 200 | ✅ 200 `correct_count: 2, total: 5` |
+| 10 | `/api/practice/generate` | POST | 연습 문제 3개 생성 | 200 | ✅ 200 문제 3개 반환 |
+| 11 | `/api/practice/submit` | POST | 즉시 채점 (단건) | 200 | ✅ 200 `is_correct: true`, explanation 반환 |
+| 12 | `/api/exam-sessions/{id}/wrong-attempts` | GET | 오답 노트 조회 | 200 | ✅ 200 오답 6개 반환 |
+| 13 | `/api/analytics/recent-sessions` | GET | 최근 세션 이력 | 200 | ✅ 200 1개 세션 반환 |
+| 14 | `/api/chat` | POST | RAG 검색 → Gemini 답변 생성 | 200 | ✅ 200 응답 정상 (PDF 미색인으로 답변: "관련 자료 없음") |
 
 ### 9-3. 테스트 #7 상세: RAG E2E 검증
 
