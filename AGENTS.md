@@ -221,8 +221,9 @@ is_deleted  BOOLEAN     NOT NULL DEFAULT false
 | wave4-chat | GET /api/chat (Hybrid Search + Gemini 답변) + RAG retriever/generator + ChatPage.tsx (출처 패널) | ✅ |
 
 ### Wave 5 — 통합 + 산출물
-- [ ] Hybrid Search recall@10 측정 + Vector 단독 비교
-- [ ] 검색 품질 평가 (docs/07-search-evaluation.md 작성)
+- [x] Hybrid Search recall@10 측정 + Vector 단독 비교 ✅ (완료 — docs/07-search-evaluation.md)
+- [x] 검색 품질 평가 (docs/07-search-evaluation.md 작성) ✅ (완료)
+- [x] retriever.py unified search() 인터페이스 + quality_score>=60 + probes=15 ✅ (완료)
 - [ ] GCP 배포 검증 (Cloud Run + Cloud SQL + Cloud Storage)
 - [ ] README 완성 (포트폴리오 소개 + 아키텍처 다이어그램)
 
