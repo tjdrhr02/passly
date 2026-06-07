@@ -115,7 +115,7 @@ LLM과 Embedding 모델 선택.
 | 항목 | Gemini (Google) | OpenAI |
 |------|----------------|--------|
 | GCP 통합 | Vertex AI 네이티브 | 외부 API |
-| 임베딩 모델 | gemini-embedding-001 (768d) | text-embedding-3-small (1536d) |
+| 임베딩 모델 | text-embedding-004 (768d) | text-embedding-3-small (1536d) |
 | 로컬 개발 | Gemini Developer API (무료 티어) | API 키 (유료) |
 | 한국어 지원 | MMTEB 1위 | 양호 |
 | 비용 | 무료 티어 포함 | 유료 |
@@ -186,6 +186,6 @@ USE_VERTEX_AI=true    → GCP (서비스 계정 인증)
 ```
 
 ### 근거
-- Gemini 모델명이 로컬/GCP 동일 (`gemini-embedding-001`, `gemini-2.0-flash`).
+- Gemini 모델명이 로컬/GCP 동일 (`text-embedding-004`, `gemini-2.0-flash`).
 - 코드 변경 없이 환경변수만 전환.
 - Cloud SQL의 pgvector 확장이 Docker의 pgvector와 동일하게 동작.

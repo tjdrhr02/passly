@@ -225,7 +225,7 @@ is_deleted  BOOLEAN     NOT NULL DEFAULT false
 - [x] 검색 품질 평가 (docs/07-search-evaluation.md 작성) ✅ (완료)
 - [x] retriever.py unified search() 인터페이스 + quality_score>=60 + probes=15 ✅ (완료)
 - [x] GCP 배포 검증 (Cloud Run + Cloud SQL + Cloud Storage) ✅ (완료)
-- [ ] README 완성 (포트폴리오 소개 + 아키텍처 다이어그램)
+- [x] README 완성 (포트폴리오 소개 + 아키텍처 다이어그램) ✅ (완료)
 
 ---
 
