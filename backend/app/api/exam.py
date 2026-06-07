@@ -1,5 +1,6 @@
 """시험 API 라우터.
 
+POST /api/certifications                      — 자격증 생성
 GET  /api/certifications                      — 자격증 목록
 GET  /api/certifications/{id}/domains         — 영역 목록
 POST /api/exam-sessions                       — 세션 생성
@@ -31,9 +32,11 @@ from app.models.user import User
 from app.models.user_attempt import UserAttempt
 from app.schemas.common import SuccessResponse
 from app.schemas.exam import (
+    CertificationCreateRequest,
     CertificationResponse,
     ChoiceResponse,
     DomainScore,
+    ExamDomainCreateRequest,
     ExamDomainResponse,
     ExamResultResponse,
     ExamSessionCreateRequest,
@@ -44,6 +47,40 @@ from app.schemas.exam import (
 )
 
 router = APIRouter(prefix="/api", tags=["exam"])
+
+
+# ---------------------------------------------------------------------------
+# POST /api/certifications
+# ---------------------------------------------------------------------------
+
+@router.post(
+    "/certifications",
+    response_model=SuccessResponse[CertificationResponse],
+    status_code=status.HTTP_201_CREATED,
+)
+async def create_certification(
+    body: CertificationCreateRequest,
+    db: Annotated[AsyncSession, Depends(get_db)],
+    current_user: Annotated[User, Depends(get_current_user)],
+) -> SuccessResponse[CertificationResponse]:
+    existing = await db.execute(
+        select(Certification).where(Certification.exam_code == body.exam_code, Certification.is_deleted == False)  # noqa: E712
+    )
+    if existing.scalar_one_or_none():
+        raise HTTPException(status_code=409, detail="이미 존재하는 exam_code입니다.")
+    cert = Certification(name=body.name, vendor=body.vendor, exam_code=body.exam_code)
+    db.add(cert)
+    await db.flush()
+    for i, d in enumerate(body.domains or [], start=1):
+        db.add(ExamDomain(
+            certification_id=cert.id,
+            name=d.name,
+            weight_percent=d.weight_percent,
+            order_num=i,
+        ))
+    await db.commit()
+    await db.refresh(cert)
+    return SuccessResponse(data=CertificationResponse.model_validate(cert))
 
 
 # ---------------------------------------------------------------------------

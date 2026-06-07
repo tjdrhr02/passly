@@ -1,9 +1,9 @@
 from __future__ import annotations
+from pydantic import BaseModel, Field
 
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel
 
 from app.schemas.common import SuccessResponse  # noqa: F401 — re-export convenience
 
@@ -104,3 +104,15 @@ class ExamResultResponse(BaseModel):
     score_percent: float
     domain_scores: list[DomainScore]
     wrong_attempts: list[WrongAttemptDetail]
+
+
+class ExamDomainCreateRequest(BaseModel):
+    name: str
+    weight_percent: int = Field(ge=1, le=100)
+
+
+class CertificationCreateRequest(BaseModel):
+    name: str
+    vendor: str
+    exam_code: str
+    domains: list[ExamDomainCreateRequest] = []
