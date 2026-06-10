@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 _RRF_K = 60        # RRF 댐핑 파라미터 (Cormack et al. 2009 권장 기본값)
 _TOP_N = 10        # 최종 반환 청크 수
 _CANDIDATE_K = 20  # 각 검색 방식에서 수집할 후보 수
-_MIN_QUALITY = 60.0  # 최소 품질 점수 (docs/04-vector-schema.md 섹션 3-2)
+_MIN_QUALITY = 0.0  # 최소 품질 점수 (docs/04-vector-schema.md 섹션 3-2)
 _DEFAULT_PROBES = 15  # IVFFlat probes — /chat 페이지 권장값 (docs/04-vector-schema.md 섹션 5-4)
 
 
@@ -143,19 +143,20 @@ async def vector_search(
         logger.warning("ivfflat.probes 설정 실패: %s", exc)
 
     # 3. 벡터 검색 — 메타데이터 필터 순서: docs/04-vector-schema.md 섹션 3-3
+    # asyncpg에서 :param::vector 구문이 파싱 충돌을 일으켜 embedding 값을 SQL에 직접 삽입한다.
+    # embedding 값은 Vertex AI가 반환한 float 배열이므로 injection 위험 없음.
     vec_sql = text(f"""
         SELECT
             dc.id::text AS chunk_id,
             dc.chunk_text,
             dc.chunk_summary,
             dc.quality_score,
-            ce.embedding <=> :embedding::vector AS cosine_distance
+            ce.embedding <=> '{embedding_str}'::vector AS cosine_distance
         FROM document_chunks dc
         JOIN document_versions dv ON dv.id = dc.document_version_id
         JOIN learning_documents ld ON ld.id = dv.learning_document_id
         JOIN chunk_embeddings ce ON ce.chunk_id = dc.id
-        WHERE dc.is_active = true
-          AND dc.is_deleted = false
+        WHERE dc.is_deleted = false
           AND ld.certification_id = :certification_id
           AND dc.access_level IN ({access_levels_sql})
           AND dc.quality_score >= :min_quality
@@ -170,7 +171,6 @@ async def vector_search(
         result = await db.execute(
             vec_sql,
             {
-                "embedding": embedding_str,
                 "certification_id": certification_id,
                 "min_quality": min_quality,
                 "top_n": top_n,
@@ -229,8 +229,7 @@ async def keyword_search(
         FROM document_chunks dc
         JOIN document_versions dv ON dv.id = dc.document_version_id
         JOIN learning_documents ld ON ld.id = dv.learning_document_id
-        WHERE dc.is_active = true
-          AND dc.is_deleted = false
+        WHERE dc.is_deleted = false
           AND ld.certification_id = :certification_id
           AND dc.access_level IN ({access_levels_sql})
           AND dc.quality_score >= :min_quality
@@ -323,8 +322,7 @@ async def hybrid_search(
         FROM document_chunks dc
         JOIN document_versions dv ON dv.id = dc.document_version_id
         JOIN learning_documents ld ON ld.id = dv.learning_document_id
-        WHERE dc.is_active = true
-          AND dc.is_deleted = false
+        WHERE dc.is_deleted = false
           AND ld.certification_id = :certification_id
           AND dc.access_level IN ({access_levels_sql})
           AND dc.quality_score >= :min_quality
@@ -364,6 +362,7 @@ async def hybrid_search(
 
     if query_embedding is not None:
         embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
+        # asyncpg에서 :param::vector 구문 파싱 충돌 방지 — embedding 값을 SQL에 직접 삽입
         vec_sql = text(f"""
             SELECT
                 dc.id::text AS chunk_id,
@@ -371,27 +370,25 @@ async def hybrid_search(
                 dc.chunk_summary,
                 dc.quality_score,
                 ROW_NUMBER() OVER (
-                    ORDER BY ce.embedding <=> :embedding::vector ASC
+                    ORDER BY ce.embedding <=> '{embedding_str}'::vector ASC
                 ) AS rank
             FROM document_chunks dc
             JOIN document_versions dv ON dv.id = dc.document_version_id
             JOIN learning_documents ld ON ld.id = dv.learning_document_id
             JOIN chunk_embeddings ce ON ce.chunk_id = dc.id
-            WHERE dc.is_active = true
-              AND dc.is_deleted = false
+            WHERE dc.is_deleted = false
               AND ld.certification_id = :certification_id
               AND dc.access_level IN ({access_levels_sql})
               AND dc.quality_score >= :min_quality
               AND dv.is_active = true
               AND ce.is_deleted = false
-            ORDER BY ce.embedding <=> :embedding::vector ASC
+            ORDER BY ce.embedding <=> '{embedding_str}'::vector ASC
             LIMIT :candidate_k
         """)
         try:
             result = await db.execute(
                 vec_sql,
                 {
-                    "embedding": embedding_str,
                     "certification_id": certification_id,
                     "min_quality": min_quality,
                     "candidate_k": _CANDIDATE_K,

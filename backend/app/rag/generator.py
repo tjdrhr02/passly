@@ -5,7 +5,7 @@ docs/05-rag-pipeline.md 섹션 8-3 참고.
 """
 from __future__ import annotations
 import logging
-from app.core.ai_client import get_llm_model
+from app.core.ai_client import generate_content
 
 logger = logging.getLogger(__name__)
 
@@ -37,9 +37,7 @@ Question: {question}
 Answer:"""
 
     try:
-        model = get_llm_model()
-        response = await model.generate_content_async(prompt)
-        return response.text
+        return await generate_content(prompt)
     except Exception as exc:
         logger.error("generate_answer 실패: %s", exc)
         return "답변 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."

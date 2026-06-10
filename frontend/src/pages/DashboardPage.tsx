@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
+const redirectIfUnauthorized = (res: Response, navigate: ReturnType<typeof useNavigate>) => {
+  if (res.status === 401) {
+    localStorage.removeItem('token')
+    navigate('/login', { replace: true })
+    return true
+  }
+  return false
+}
+
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
 const authHeader = () => ({ Authorization: `Bearer ${localStorage.getItem('token') || ''}` })
 
@@ -61,6 +70,9 @@ const DashboardPage = () => {
           fetch(`${API_BASE}/api/analytics/weak-domains`, { headers: authHeader() }),
         ])
 
+        for (const res of [summaryRes, sessionsRes, domainsRes]) {
+          if (redirectIfUnauthorized(res, navigate)) return
+        }
         if (!summaryRes.ok || !sessionsRes.ok || !domainsRes.ok) {
           throw new Error('데이터를 불러오는 데 실패했습니다.')
         }
@@ -121,20 +133,35 @@ const DashboardPage = () => {
     return (
       <div className="p-6">
         <h1 className="text-2xl font-semibold text-gray-900">대시보드</h1>
-        <div className="mt-12 flex flex-col items-center text-center">
-          <p className="text-gray-500 text-lg">아직 학습 기록이 없습니다. 시험을 시작해보세요!</p>
-          <div className="mt-6 flex gap-4">
+        <div className="mt-12 flex flex-col items-center text-center max-w-md mx-auto">
+          <div className="w-16 h-16 rounded-full bg-blue-50 flex items-center justify-center mb-4">
+            <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
+          <h2 className="text-lg font-semibold text-gray-800">시작하려면 자료를 업로드하세요</h2>
+          <p className="mt-2 text-sm text-gray-500">
+            공식 가이드 또는 덤프 PDF를 업로드하면<br />
+            AI가 문제를 생성하고 학습을 시작할 수 있습니다.
+          </p>
+          <button
+            onClick={() => navigate('/upload')}
+            className="mt-6 px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+          >
+            자료 업로드 시작 →
+          </button>
+          <div className="mt-6 flex gap-3">
             <button
               onClick={() => navigate('/exam')}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              실전 시험 시작
+              실전 시험 바로가기
             </button>
             <button
               onClick={() => navigate('/practice')}
-              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors"
+              className="px-4 py-2 text-sm text-gray-500 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              연습 모드 시작
+              연습 모드 바로가기
             </button>
           </div>
         </div>

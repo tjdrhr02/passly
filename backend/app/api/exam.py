@@ -208,6 +208,12 @@ async def get_session_questions(
     )
     rows = q_result.all()
 
+    if not rows:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="이 자격증에 등록된 문제가 없습니다. 덤프 PDF를 먼저 업로드해 주세요.",
+        )
+
     # choices 조회 (is_correct 미포함 — 시험 중 정답 노출 금지)
     question_ids = [row.Question.id for row in rows]
     choices_result = await db.execute(

@@ -105,6 +105,14 @@ const UploadPage = () => {
   const [certifications, setCertifications] = useState<Certification[]>([])
   const [certLoading, setCertLoading] = useState(true)
 
+  // Inline cert creation state
+  const [showCertForm, setShowCertForm] = useState(false)
+  const [certName, setCertName] = useState('')
+  const [certVendor, setCertVendor] = useState('')
+  const [certExamCode, setCertExamCode] = useState('')
+  const [certCreating, setCertCreating] = useState(false)
+  const [certCreateError, setCertCreateError] = useState('')
+
   // Form state
   const [selectedCert, setSelectedCert] = useState('')
   const [sourceType, setSourceType] = useState<'OFFICIAL_GUIDE' | 'DUMP'>('OFFICIAL_GUIDE')
@@ -116,6 +124,9 @@ const UploadPage = () => {
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
   const [activeRun, setActiveRun] = useState<PipelineRunOut | null>(null)
+
+  // Delete state
+  const [deletingId, setDeletingId] = useState<string | null>(null)
 
   // History
   const [history, setHistory] = useState<DocumentOut[]>([])
@@ -180,6 +191,56 @@ const UploadPage = () => {
   }, [activeRun])
 
   // ── Handlers ─────────────────────────────────────────────────────────────
+  const handleDelete = async (docId: string) => {
+    if (!window.confirm('이 문서를 삭제하시겠습니까?')) return
+    setDeletingId(docId)
+    try {
+      const res = await fetch(`${API_BASE}/api/upload/${docId}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      })
+      if (!res.ok) {
+        const json = await res.json()
+        alert(json.detail ?? '삭제에 실패했습니다.')
+        return
+      }
+      fetchHistory(1)
+      setHistoryPage(1)
+    } catch {
+      alert('네트워크 오류가 발생했습니다.')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const handleCertCreate = async () => {
+    setCertCreating(true)
+    setCertCreateError('')
+    try {
+      const res = await fetch(`${API_BASE}/api/certifications`, {
+        method: 'POST',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: certName.trim(), vendor: certVendor.trim(), exam_code: certExamCode.trim(), domains: [] }),
+      })
+      const json = await res.json()
+      if (!res.ok) {
+        setCertCreateError(json.detail ?? '자격증 등록에 실패했습니다.')
+        return
+      }
+      const created: Certification = json.data
+      setCertifications((prev) => [...prev, created])
+      setSelectedCert(created.id)
+      setCertName('')
+      setCertVendor('')
+      setCertExamCode('')
+      setShowCertForm(false)
+    } catch {
+      setCertCreateError('네트워크 오류가 발생했습니다.')
+    } finally {
+      setCertCreating(false)
+    }
+  }
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0] ?? null
     setFile(f)
@@ -244,6 +305,15 @@ const UploadPage = () => {
         </p>
       </div>
 
+      {/* 문서 유형 안내 */}
+      <div className="rounded-lg border border-blue-100 bg-blue-50 px-5 py-4 text-sm">
+        <p className="font-medium text-blue-800 mb-2">문서 유형별 기능 안내</p>
+        <div className="space-y-1 text-blue-700">
+          <p>📚 <span className="font-medium">공식 가이드 (Official Guide)</span> — AI 질문 탭에서 내용 기반 질문/답변에 사용됩니다.</p>
+          <p>📝 <span className="font-medium">덤프 (Dump)</span> — 실전 시험 및 연습 모드의 문제 풀이에 사용됩니다.</p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* ── Upload Form ── */}
         <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -252,9 +322,56 @@ const UploadPage = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Certification select */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">자격증</label>
+              <div className="mb-1 flex items-center justify-between">
+                <label className="block text-sm font-medium text-gray-700">자격증</label>
+                {!certLoading && (
+                  <button
+                    type="button"
+                    onClick={() => setShowCertForm((v) => !v)}
+                    className="text-xs text-blue-600 hover:underline"
+                  >
+                    {showCertForm ? '취소' : '+ 새 자격증 추가'}
+                  </button>
+                )}
+              </div>
               {certLoading ? (
                 <div className="h-9 animate-pulse rounded-md bg-gray-100" />
+              ) : showCertForm || certifications.length === 0 ? (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 space-y-2">
+                  <p className="text-xs font-medium text-blue-700">새 자격증 등록</p>
+                  <input
+                    type="text"
+                    placeholder="자격증 이름 (예: Azure AI Engineer Associate)"
+                    value={certName}
+                    onChange={(e) => setCertName(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="벤더 (예: Microsoft)"
+                    value={certVendor}
+                    onChange={(e) => setCertVendor(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="시험 코드 (예: AI-102)"
+                    value={certExamCode}
+                    onChange={(e) => setCertExamCode(e.target.value)}
+                    className="w-full rounded-md border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  {certCreateError && (
+                    <p className="text-xs text-red-600">{certCreateError}</p>
+                  )}
+                  <button
+                    type="button"
+                    disabled={certCreating || !certName.trim() || !certVendor.trim() || !certExamCode.trim()}
+                    onClick={handleCertCreate}
+                    className="w-full rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    {certCreating ? '등록 중...' : '자격증 등록'}
+                  </button>
+                </div>
               ) : (
                 <select
                   value={selectedCert}
@@ -262,9 +379,6 @@ const UploadPage = () => {
                   className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
-                  {certifications.length === 0 && (
-                    <option value="">자격증이 없습니다</option>
-                  )}
                   {certifications.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.name} ({c.exam_code})
@@ -424,7 +538,8 @@ const UploadPage = () => {
                     <th className="pb-2 pr-4">제목</th>
                     <th className="pb-2 pr-4">유형</th>
                     <th className="pb-2 pr-4">파일명</th>
-                    <th className="pb-2">업로드 일시</th>
+                    <th className="pb-2 pr-4">업로드 일시</th>
+                    <th className="pb-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
@@ -437,7 +552,17 @@ const UploadPage = () => {
                         </span>
                       </td>
                       <td className="py-2.5 pr-4 text-gray-500">{doc.original_filename}</td>
-                      <td className="py-2.5 text-gray-500">{formatDate(doc.created_at)}</td>
+                      <td className="py-2.5 pr-4 text-gray-500">{formatDate(doc.created_at)}</td>
+                      <td className="py-2.5">
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(doc.id)}
+                          disabled={deletingId === doc.id}
+                          className="text-xs text-red-400 hover:text-red-600 disabled:opacity-40"
+                        >
+                          {deletingId === doc.id ? '삭제 중...' : '삭제'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

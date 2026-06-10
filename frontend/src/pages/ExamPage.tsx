@@ -589,11 +589,13 @@ const ExamPage = () => {
       const qRes = await fetch(`${API_BASE}/api/exam-sessions/${sid}/questions`, {
         headers: authHeader(),
       })
-      if (!qRes.ok) {
-        const json = await qRes.json()
-        throw new Error(json.detail ?? '문제를 불러오지 못했습니다.')
-      }
       const qJson = await qRes.json()
+      if (!qRes.ok) {
+        throw new Error(qJson.detail ?? '문제를 불러오지 못했습니다.')
+      }
+      if (!qJson.data?.questions?.length) {
+        throw new Error('이 자격증에 등록된 문제가 없습니다. 덤프 PDF를 먼저 업로드해 주세요.')
+      }
       setSessionData(qJson.data)
       setPhase('exam')
     } catch (e) {

@@ -266,20 +266,27 @@ async def reindex_vector(session: AsyncSession) -> None:  # noqa: ARG001
 
     REINDEX INDEX CONCURRENTLY는 트랜잭션 블록 내 실행 불가이므로
     autocommit 모드의 별도 엔진 연결을 사용한다.
-    인덱스가 존재하지 않으면 조용히 건너뜀.
+    인덱스가 존재하지 않거나 20초 내 완료되지 않으면 조용히 건너뜀.
     docs/05-rag-pipeline.md 섹션 7-2 참고.
     """
+    import asyncio
+
     settings = get_settings()
     engine = create_async_engine(
         settings.async_database_url,
         isolation_level="AUTOCOMMIT",
     )
     try:
-        async with engine.connect() as conn:
-            await conn.execute(
-                text("REINDEX INDEX CONCURRENTLY idx_chunk_embeddings_embedding_ivfflat")
-            )
+        async def _do_reindex() -> None:
+            async with engine.connect() as conn:
+                await conn.execute(
+                    text("REINDEX INDEX CONCURRENTLY idx_chunk_embeddings_embedding_ivfflat")
+                )
+
+        await asyncio.wait_for(_do_reindex(), timeout=20.0)
         logger.info("reindex_vector: IVFFlat 인덱스 재구성 완료")
+    except asyncio.TimeoutError:
+        logger.warning("reindex_vector: 20초 타임아웃으로 건너뜀")
     except Exception as exc:
         logger.warning("reindex_vector: 인덱스 재구성 건너뜀 — %s", exc)
     finally:

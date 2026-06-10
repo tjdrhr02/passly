@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 from sqlalchemy import text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.dependencies import _get_factory
 from app.models.document_version import DocumentVersion
 from app.models.learning_document import LearningDocument
 from app.models.pipeline_run import PipelineRun
@@ -45,16 +46,25 @@ logger = logging.getLogger(__name__)
 
 async def run_pipeline(
     pipeline_run_id: uuid.UUID,
-    db: AsyncSession,
+    _unused_db: AsyncSession | None = None,
 ) -> None:
     """파이프라인 전체 실행 진입점.
 
     pipeline_runs.status 전이:
         PENDING → PROCESSING → COMPLETED | FAILED
 
-    실패 시 pipeline_runs.error_message에 예외 메시지를 기록하고 FAILED 상태로 종료.
+    BackgroundTask로 호출될 때 request-scoped session이 닫히는 문제를 방지하기 위해
+    내부에서 독립적인 세션을 직접 생성한다.
     docs/05-rag-pipeline.md 섹션 2-2 상태 전이도 참고.
     """
+    async with _get_factory()() as db:
+        await _run_pipeline_with_session(pipeline_run_id, db)
+
+
+async def _run_pipeline_with_session(
+    pipeline_run_id: uuid.UUID,
+    db: AsyncSession,
+) -> None:
     run: PipelineRun | None = await db.get(PipelineRun, pipeline_run_id)
     if run is None:
         logger.error("run_pipeline: pipeline_run_id=%s 레코드 없음", pipeline_run_id)

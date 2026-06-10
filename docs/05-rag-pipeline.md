@@ -236,18 +236,23 @@ async def extract_text_with_structure(file_path: str) -> list[dict]:
 ### 4-2. 경로 분기 로직
 
 ```python
-# backend/app/pipeline/router.py (Wave 3 구현 시 참조)
-async def run_pipeline(pipeline_run_id: str, session: AsyncSession) -> None:
-    run = await session.get(PipelineRun, pipeline_run_id)
-    doc = await session.get(LearningDocument, run.learning_document_id)
+# backend/app/pipeline/pipeline.py
+# BackgroundTask 세션 문제를 방지하기 위해 내부에서 독립 세션 생성
+async def run_pipeline(pipeline_run_id: uuid.UUID, _unused_db=None) -> None:
+    async with _get_factory()() as db:
+        await _run_pipeline_with_session(pipeline_run_id, db)
 
-    await update_status(session, run, "PROCESSING")
+async def _run_pipeline_with_session(pipeline_run_id: uuid.UUID, db: AsyncSession) -> None:
+    run = await db.get(PipelineRun, pipeline_run_id)
+    doc = await db.get(LearningDocument, run.learning_document_id)
+
+    await _set_status(db, run, "PROCESSING", started_at=datetime.now(timezone.utc))
 
     try:
-        pages = await extract_text_with_structure(doc.file_path)
+        pages = extract_text_blocks(doc.file_path)
 
         if doc.source_type == "OFFICIAL_GUIDE":
-            await process_official_guide(session, run, pages)
+            await _process_official_guide(db, run, dv, doc, pages)
         elif doc.source_type == "DUMP":
             await process_dump(session, run, pages)
 
@@ -1042,65 +1047,58 @@ ORDER BY dc.chunk_order;
 ### 9-2. Python 구현 패턴
 
 ```python
-# backend/app/core/ai_client.py (Wave 3 구현 시 참조)
-import os
+# backend/app/core/ai_client.py (실제 구현)
+# google-cloud-aiplatform 의존 없이 google-auth + httpx REST API 방식으로 구현
+# USE_VERTEX_AI=true 시 Vertex AI REST API 직접 호출 (ADC 자동 인증)
+
+import asyncio, os
 import google.generativeai as genai
-from google.cloud import aiplatform
+import httpx
 
 USE_VERTEX_AI: bool = os.getenv("USE_VERTEX_AI", "false").lower() == "true"
 GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
-VERTEX_PROJECT_ID: str = os.getenv("VERTEX_PROJECT_ID", "")
-VERTEX_LOCATION: str = os.getenv("VERTEX_LOCATION", "us-central1")
-EMBED_MODEL_NAME: str = "text-embedding-004"
-LLM_MODEL_NAME: str = "gemini-1.5-flash"
+GCP_PROJECT_ID: str = os.getenv("GCP_PROJECT_ID", "")
+GCP_REGION: str = os.getenv("GCP_REGION", "asia-northeast3")
+EMBED_MODEL_NAME = "text-embedding-004"
+LLM_MODEL_NAME = "gemini-1.5-flash"
 
+def _get_vertex_token() -> str:
+    """ADC로 Vertex AI Bearer 토큰 획득 (동기 — asyncio.to_thread로 호출)."""
+    import google.auth, google.auth.transport.requests
+    credentials, _ = google.auth.default(
+        scopes=["https://www.googleapis.com/auth/cloud-platform"]
+    )
+    credentials.refresh(google.auth.transport.requests.Request())
+    return credentials.token
 
-def get_embedding_model():
-    """
-    USE_VERTEX_AI 환경변수에 따라 임베딩 모델 클라이언트를 반환한다.
-    코드 호출부는 동일한 인터페이스를 사용.
-    """
+async def embed_texts(texts: list[str], task_type: str = "retrieval_document") -> list:
     if USE_VERTEX_AI:
-        # Vertex AI: 서비스 계정 자동 인증 (Cloud Run에서 ADC 사용)
-        aiplatform.init(project=VERTEX_PROJECT_ID, location=VERTEX_LOCATION)
-        from vertexai.language_models import TextEmbeddingModel
-        return TextEmbeddingModel.from_pretrained(f"text-embedding-004")
-    else:
-        # Gemini Developer API: API 키 인증
-        genai.configure(api_key=GEMINI_API_KEY)
-        return genai  # genai.embed_content() 호출
+        token = await asyncio.to_thread(_get_vertex_token)
+        url = f"https://{GCP_REGION}-aiplatform.googleapis.com/v1/projects/{GCP_PROJECT_ID}/locations/{GCP_REGION}/publishers/google/models/{EMBED_MODEL_NAME}:predict"
+        instances = [{"content": t, "task_type": task_type.upper()} for t in texts]
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            r = await client.post(url, json={"instances": instances},
+                                  headers={"Authorization": f"Bearer {token}"})
+            r.raise_for_status()
+            return [p["embeddings"]["values"] for p in r.json()["predictions"]]
+    genai.configure(api_key=GEMINI_API_KEY)
+    response = genai.embed_content(model=f"models/{EMBED_MODEL_NAME}", content=texts, task_type=task_type)
+    return response.get("embedding") or []
 
-
-def get_llm_model():
-    """
-    USE_VERTEX_AI 환경변수에 따라 LLM 모델 클라이언트를 반환한다.
-    """
+async def generate_content(prompt: str) -> str:
     if USE_VERTEX_AI:
-        aiplatform.init(project=VERTEX_PROJECT_ID, location=VERTEX_LOCATION)
-        import vertexai.generative_models as vertex_genai
-        return vertex_genai.GenerativeModel(LLM_MODEL_NAME)
-    else:
-        genai.configure(api_key=GEMINI_API_KEY)
-        return genai.GenerativeModel(LLM_MODEL_NAME)
-
-
-async def embed_texts(texts: list[str], task_type: str = "retrieval_document") -> list[list[float]]:
-    """
-    임베딩 생성 통합 인터페이스. 내부적으로 USE_VERTEX_AI 분기 처리.
-    호출부는 이 함수만 사용하면 됨.
-    """
-    if USE_VERTEX_AI:
-        model = get_embedding_model()
-        embeddings = model.get_embeddings(texts, task_type=task_type)
-        return [e.values for e in embeddings]
-    else:
-        model = get_embedding_model()
-        response = model.embed_content(
-            model=f"models/{EMBED_MODEL_NAME}",
-            content=texts,
-            task_type=task_type,
-        )
-        return response["embedding"] if isinstance(texts, str) else response["embeddings"]
+        token = await asyncio.to_thread(_get_vertex_token)
+        url = f"https://{GCP_REGION}-aiplatform.googleapis.com/v1/projects/{GCP_PROJECT_ID}/locations/{GCP_REGION}/publishers/google/models/{LLM_MODEL_NAME}:generateContent"
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            r = await client.post(url,
+                json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]},
+                headers={"Authorization": f"Bearer {token}"})
+            r.raise_for_status()
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    genai.configure(api_key=GEMINI_API_KEY)
+    model = genai.GenerativeModel(LLM_MODEL_NAME)
+    response = await model.generate_content_async(prompt)
+    return response.text
 ```
 
 ### 9-3. 환경변수 구성 파일
@@ -1113,8 +1111,8 @@ DATABASE_URL=postgresql+asyncpg://passly:passly@localhost:5432/passly
 
 # .env.gcp (GCP 배포용 — Secret Manager로 관리, 파일 미사용)
 USE_VERTEX_AI=true
-VERTEX_PROJECT_ID=your-gcp-project-id
-VERTEX_LOCATION=us-central1
+GCP_PROJECT_ID=your-gcp-project-id
+GCP_REGION=asia-northeast3
 DATABASE_URL=postgresql+asyncpg://passly:passly@/passly?host=/cloudsql/project:region:instance
 ```
 
